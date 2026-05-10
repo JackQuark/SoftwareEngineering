@@ -14,6 +14,8 @@ const state = {
   playbackSpeed: 1,
   draggingNodeId: null,
   lastResult: null,
+  undoStack: [],
+  redoStack: [],
 };
 
 const sampleGraph = {
@@ -43,6 +45,12 @@ function cacheElements() {
   elements.loadSampleBtn = document.getElementById("load-sample-btn");
   elements.clearGraphBtn = document.getElementById("clear-graph-btn");
   elements.addEdgeBtn = document.getElementById("add-edge-btn");
+  elements.deleteNodeBtn = document.getElementById("delete-node-btn");
+  elements.deleteNodeSelect = document.getElementById("delete-node-select");
+  elements.deleteEdgeBtn = document.getElementById("delete-edge-btn");
+  elements.deleteEdgeSelect = document.getElementById("delete-edge-select");
+  elements.undoBtn = document.getElementById("undo-btn");
+  elements.redoBtn = document.getElementById("redo-btn");
   elements.runBtn = document.getElementById("run-btn");
   elements.playBtn = document.getElementById("play-btn");
   elements.pauseBtn = document.getElementById("pause-btn");
@@ -74,6 +82,7 @@ function cacheElements() {
 
 function bindEvents() {
   elements.addNodeBtn.addEventListener("click", () => {
+    saveHistory();
     addNode();
     refreshAfterGraphChange();
   });
@@ -101,9 +110,55 @@ function bindEvents() {
       return;
     }
 
+    saveHistory();
     addEdge(from, to, weight);
     refreshAfterGraphChange();
   });
+
+  // Delete node/edge events >>>
+  elements.deleteNodeBtn.addEventListener("click", () => {
+    const nodeId = Number(elements.deleteNodeSelect.value);
+    if (!Number.isFinite(nodeId) || !state.nodes.find((n) => n.id === nodeId)) {
+      showResult("請選擇一個有效的節點。", true);
+      return;
+    }
+    saveHistory();
+    deleteNode(nodeId);
+    refreshAfterGraphChange();
+    showResult(`節點 ${nodeId} 及其相關邊已刪除。`);
+  });
+
+  elements.deleteEdgeBtn.addEventListener("click", () => {
+    const edgeId = Number(elements.deleteEdgeSelect.value);
+    if (!Number.isFinite(edgeId) || !state.edges.find((e) => e.id === edgeId)) {
+      showResult("請選擇一條有效的邊。", true);
+      return;
+    }
+    saveHistory();
+    deleteEdge(edgeId);
+    refreshAfterGraphChange();
+    showResult("邊已刪除。");
+  });
+
+  elements.undoBtn.addEventListener("click", undo);
+  elements.redoBtn.addEventListener("click", redo);
+
+  document.addEventListener("keydown", (event) => {
+    const isInput = ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName);
+    if (isInput) return;
+    if ((event.ctrlKey || event.metaKey) && event.key === "z" && !event.shiftKey) {
+      event.preventDefault();
+      undo();
+    }
+    if (
+      (event.ctrlKey || event.metaKey) &&
+      (event.key === "y" || (event.key === "z" && event.shiftKey))
+    ) {
+      event.preventDefault();
+      redo();
+    }
+  });
+  // <<< Delete node/edge events
 
   elements.runBtn.addEventListener("click", runQuery);
   elements.playBtn.addEventListener("click", startPlayback);
@@ -160,6 +215,8 @@ function loadSampleGraph() {
   state.edges = [];
   state.nextNodeId = 1;
   state.nextEdgeId = 1;
+  state.undoStack = [];
+  state.redoStack = [];
 
   for (let index = 0; index < sampleGraph.nodeCount; index += 1) {
     addNode();
@@ -184,6 +241,8 @@ function clearGraph() {
   state.edges = [];
   state.nextNodeId = 1;
   state.nextEdgeId = 1;
+  state.undoStack = [];
+  state.redoStack = [];
   clearComputation();
   refreshControls();
   renderGraph();
@@ -205,6 +264,71 @@ function addEdge(from, to, weight) {
   });
   state.nextEdgeId += 1;
 }
+
+function deleteNode(nodeId) {
+  state.nodes = state.nodes.filter((n) => n.id !== nodeId);
+  state.edges = state.edges.filter((e) => e.from !== nodeId && e.to !== nodeId);
+}
+
+function deleteEdge(edgeId) {
+  state.edges = state.edges.filter((e) => e.id !== edgeId);
+}
+
+// History (Undo / Redo) >>>
+
+const MAX_HISTORY = 64;
+
+function snapshotState() {
+  return {
+    nodes: state.nodes.map((n) => ({ ...n })),
+    edges: state.edges.map((e) => ({ ...e })),
+    nextNodeId: state.nextNodeId,
+    nextEdgeId: state.nextEdgeId,
+  };
+}
+
+function saveHistory() {
+  state.undoStack.push(snapshotState());
+  if (state.undoStack.length > MAX_HISTORY) {
+    state.undoStack.shift();
+  }
+  state.redoStack = [];
+  updateUndoRedoButtons();
+}
+
+function undo() {
+  if (state.undoStack.length === 0) return;
+  state.redoStack.push(snapshotState());
+  const snap = state.undoStack.pop();
+  applySnapshot(snap);
+  refreshAfterGraphChange();
+  updateUndoRedoButtons();
+  showResult("已復原上一步操作。");
+}
+
+function redo() {
+  if (state.redoStack.length === 0) return;
+  state.undoStack.push(snapshotState());
+  const snap = state.redoStack.pop();
+  applySnapshot(snap);
+  refreshAfterGraphChange();
+  updateUndoRedoButtons();
+  showResult("已重做上一步操作。");
+}
+
+function applySnapshot(snap) {
+  state.nodes = snap.nodes.map((n) => ({ ...n }));
+  state.edges = snap.edges.map((e) => ({ ...e }));
+  state.nextNodeId = snap.nextNodeId;
+  state.nextEdgeId = snap.nextEdgeId;
+}
+
+function updateUndoRedoButtons() {
+  elements.undoBtn.disabled = state.undoStack.length === 0;
+  elements.redoBtn.disabled = state.redoStack.length === 0;
+}
+
+// <<< History (Undo / Redo)
 
 function refreshAfterGraphChange() {
   pausePlayback();
@@ -231,9 +355,23 @@ function refreshControls() {
   fillSelect(elements.queryVia, nodeIds);
   fillSelect(elements.queryTarget, nodeIds);
 
+  // Delete node select
+  fillSelect(elements.deleteNodeSelect, nodeIds);
+
+  // Delete edge select — label each edge as "N→M (w)"
+  const prevEdge = elements.deleteEdgeSelect.value;
+  elements.deleteEdgeSelect.innerHTML = state.edges
+    .map((e) => `<option value="${e.id}">${e.from} → ${e.to} (w=${e.weight})</option>`)
+    .join("");
+  if (state.edges.find((e) => String(e.id) === prevEdge)) {
+    elements.deleteEdgeSelect.value = prevEdge;
+  }
+
   elements.nodeCount.textContent = String(state.nodes.length);
   elements.edgeCount.textContent = String(state.edges.length);
   elements.stepCount.textContent = String(state.animationSteps.length);
+
+  updateUndoRedoButtons();
 }
 
 function fillSelect(select, nodeIds) {

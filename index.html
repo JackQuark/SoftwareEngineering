@@ -53,6 +53,7 @@
                 <select id="query-target"></select>
               </label>
             </div>
+            <div style="height: 8px;"></div>
             <button id="run-btn" class="primary-btn full-width-btn">
               執行兩次最短路徑
             </button>
@@ -81,18 +82,30 @@
         </div>
       </div>
 
-      <div class="grid-stack-item" gs-x="0" gs-y="9" gs-w="3" gs-h="4" gs-min-w="2" gs-min-h="4">
+      <div class="grid-stack-item" gs-x="0" gs-y="9" gs-w="3" gs-h="6" gs-min-w="2" gs-min-h="5">
         <div class="grid-stack-item-content">
           <section class="panel">
             <div class="panel-title-row">
               <h2>Graph Builder</h2>
-              <span class="mini-tag">可拖曳節點</span>
+              <div class="undo-redo-group">
+                <button id="undo-btn" class="ghost-btn icon-btn" title="Undo (Ctrl+Z)" disabled>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13C5.5 7.5 11 5 16 7c3 1.2 5 4 5 7"/></svg>
+                  Undo
+                </button>
+                <button id="redo-btn" class="ghost-btn icon-btn" title="Redo (Ctrl+Y)" disabled>
+                  Redo
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M21 13C18.5 7.5 13 5 8 7c-3 1.2-5 4-5 7"/></svg>
+                </button>
+              </div>
             </div>
+
             <div class="action-row">
               <button id="add-node-btn" class="primary-btn">新增節點</button>
               <button id="load-sample-btn" class="ghost-btn">載入示範圖</button>
               <button id="clear-graph-btn" class="ghost-btn danger-btn">清空圖</button>
             </div>
+
+            <div class="builder-divider"><span>新增邊</span></div>
 
             <div class="field-grid">
               <label>
@@ -108,10 +121,34 @@
                 <input id="edge-weight" type="number" value="4" step="1" />
               </label>
             </div>
-
+            <div style="height: 8px;"></div>
             <button id="add-edge-btn" class="secondary-btn full-width-btn">
               新增有向邊
             </button>
+
+            <div class="builder-divider"><span>刪除</span></div>
+
+            <div class="field-grid">
+              <label>
+                <span>Node</span>
+                <select id="delete-node-select"></select>
+              </label>
+
+              <label>
+                <span>&nbsp;</span>
+                <button id="delete-node-btn" class="ghost-btn danger-btn full-height-btn">刪除節點</button>
+              </label>
+
+              <label>
+                <span>Edge</span>
+                <select id="delete-edge-select"></select>
+              </label>
+              
+              <label>
+                <span>&nbsp;</span>
+                <button id="delete-edge-btn" class="ghost-btn danger-btn full-height-btn">刪除邊</button>
+              </label>
+            </div>
           </section>
         </div>
       </div>

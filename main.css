@@ -731,6 +731,65 @@ tbody tr.focus-row {
   font-size: 12px;
 }
 
+.undo-redo-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px;
+  font-size: 0.8rem;
+  border-radius: 10px;
+  color: var(--text-muted);
+  transition: color 0.16s ease, border-color 0.16s ease, opacity 0.16s ease;
+}
+
+.icon-btn:not(:disabled):hover {
+  color: var(--accent-cyan);
+  border-color: rgba(121, 255, 247, 0.36);
+}
+
+.icon-btn:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.icon-btn svg {
+  flex-shrink: 0;
+}
+
+.builder-divider {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 10px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.builder-divider::before,
+.builder-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(121, 255, 247, 0.12);
+}
+
+.full-height-btn {
+  width: 100%;
+  height: 100%;
+  min-height: 44px;
+}
+
 @media (max-width: 1100px) {
   .graph-highlight {
     width: calc(100% - 172px);
