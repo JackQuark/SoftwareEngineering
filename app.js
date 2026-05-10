@@ -848,9 +848,10 @@ function renderGraph() {
       const active = currentStep?.edgeId === edge.id;
       const updated = active && currentStep?.relaxed;
       const strokeWidth = (2.2 + ratio * 1.6).toFixed(2);
-      const labelWidth = String(edge.weight).length > 2 ? 44 : 36;
+      const weightStr = String(edge.weight);
+      const labelWidth = Math.max(20, Math.ceil(weightStr.length * 8) + 14);
       const labelX = geometry.label.x - labelWidth / 2;
-      const labelY = geometry.label.y - 14;
+      const labelY = geometry.label.y - 10;
 
       return `
         <g class="edge-group">
@@ -861,7 +862,7 @@ function renderGraph() {
             stroke-width="${strokeWidth}"
             marker-end="url(#arrow-head)"
           ></path>
-          <rect class="edge-label-box" x="${labelX}" y="${labelY}" width="${labelWidth}" height="24" rx="12"></rect>
+          <rect class="edge-label-box" x="${labelX}" y="${labelY}" width="${labelWidth}" height="20" rx="12"></rect>
           <text class="edge-label-text" x="${geometry.label.x}" y="${geometry.label.y + 5}" text-anchor="middle">${edge.weight}</text>
         </g>
       `;
@@ -1261,7 +1262,15 @@ function getEdgeGeometry(edge) {
     .sort((left, right) => left.id - right.id);
 
   const pairIndex = related.findIndex((item) => item.id === edge.id);
-  const offset = related.length > 1 ? (pairIndex - (related.length - 1) / 2) * 34 : 0;
+  const canonical = related[0];
+  const canonicalFrom = state.nodes.find((n) => n.id === canonical.from);
+  const canonicalTo   = state.nodes.find((n) => n.id === canonical.to);
+  const cdx = canonicalTo.x - canonicalFrom.x;
+  const cdy = canonicalTo.y - canonicalFrom.y;
+  const cd  = Math.hypot(cdx, cdy) || 1;
+  const cnx = -cdy / cd;
+  const cny =  cdx / cd;
+  const offset = related.length > 1 ? (pairIndex - (related.length - 1) / 2) * 50 : 0;
 
   const start = {
     x: from.x + ux * NODE_RADIUS,
@@ -1272,8 +1281,8 @@ function getEdgeGeometry(edge) {
     y: to.y - uy * NODE_RADIUS,
   };
   const control = {
-    x: (start.x + end.x) / 2 + nx * offset,
-    y: (start.y + end.y) / 2 + ny * offset,
+    x: (start.x + end.x) / 2 + cnx * offset,
+    y: (start.y + end.y) / 2 + cny * offset,
   };
   const label = quadraticPoint(start, control, end, 0.5);
 

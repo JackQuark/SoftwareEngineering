@@ -622,7 +622,7 @@ tbody tr.focus-row {
 
 .edge-label-text {
   fill: var(--accent-hot);
-  font-family: "Orbitron", sans-serif;
+  font-family: "consola", monospace;
   font-size: 13px;
   letter-spacing: 0.04em;
 }
