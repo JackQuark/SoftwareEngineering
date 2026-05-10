@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Intermediate Point Shortest Path Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack.min.css"
+    />
+    <link rel="stylesheet" href="main.css" />
+    <script src="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell grid-stack">
+      <div class="grid-stack-item" gs-x="0" gs-y="0" gs-w="3" gs-h="3" gs-min-w="2" gs-min-h="3">
+        <div class="grid-stack-item-content">
+          <div class="brand-block">
+            <p class="eyebrow">Intermediate Point Shortest Path</p>
+            <h1>Dual Bellman-Ford Visualizer</h1>
+            <p class="brand-copy">
+              先算起點到每個點的距離，再算每個點到終點的距離，最後把中繼點那一格前後相加。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-stack-item" gs-x="0" gs-y="3" gs-w="3" gs-h="3" gs-min-w="2" gs-min-h="3">
+        <div class="grid-stack-item-content">
+          <section class="panel">
+            <div class="panel-title-row">
+              <h2>Query</h2>
+              <span class="mini-tag">Drag</span>
+            </div>
+            <div class="field-grid">
+              <label>
+                <span>Start</span>
+                <select id="query-source"></select>
+              </label>
+              <label>
+                <span>Via</span>
+                <select id="query-via"></select>
+              </label>
+              <label>
+                <span>Target</span>
+                <select id="query-target"></select>
+              </label>
+            </div>
+            <button id="run-btn" class="primary-btn full-width-btn">
+              執行兩次最短路徑
+            </button>
+          </section>
+        </div>
+      </div>
+
+      <div class="grid-stack-item" gs-x="0" gs-y="6" gs-w="3" gs-h="3" gs-min-w="2" gs-min-h="3">
+        <div class="grid-stack-item-content">
+          <section class="panel">
+            <div class="panel-title-row">
+              <h2>Playback</h2>
+              <span id="speed-label" class="mini-tag">1.0x</span>
+            </div>
+            <label class="slider-field">
+              <span>播放速度</span>
+              <input id="speed-slider" type="range" min="0.25" max="3" step="0.25" value="1" />
+            </label>
+            <div class="action-row">
+              <button id="play-btn" class="secondary-btn">播放</button>
+              <button id="pause-btn" class="ghost-btn">暫停</button>
+              <button id="step-btn" class="ghost-btn">下一步</button>
+              <button id="reset-btn" class="ghost-btn">重置</button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="grid-stack-item" gs-x="0" gs-y="9" gs-w="3" gs-h="4" gs-min-w="2" gs-min-h="4">
+        <div class="grid-stack-item-content">
+          <section class="panel">
+            <div class="panel-title-row">
+              <h2>Graph Builder</h2>
+              <span class="mini-tag">可拖曳節點</span>
+            </div>
+            <div class="action-row">
+              <button id="add-node-btn" class="primary-btn">新增節點</button>
+              <button id="load-sample-btn" class="ghost-btn">載入示範圖</button>
+              <button id="clear-graph-btn" class="ghost-btn danger-btn">清空圖</button>
+            </div>
+
+            <div class="field-grid">
+              <label>
+                <span>From</span>
+                <select id="edge-from"></select>
+              </label>
+              <label>
+                <span>To</span>
+                <select id="edge-to"></select>
+              </label>
+              <label class="full-span">
+                <span>Weight</span>
+                <input id="edge-weight" type="number" value="4" step="1" />
+              </label>
+            </div>
+
+            <button id="add-edge-btn" class="secondary-btn full-width-btn">
+              新增有向邊
+            </button>
+          </section>
+        </div>
+      </div>
+
+      <div class="grid-stack-item" gs-x="0" gs-y="13" gs-w="3" gs-h="2" gs-min-w="2" gs-min-h="2">
+        <div class="grid-stack-item-content">
+          <section class="panel stat-panel">
+            <div class="stat-card">
+              <span class="stat-label">節點數</span>
+              <strong id="node-count">0</strong>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">邊數</span>
+              <strong id="edge-count">0</strong>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">動畫步數</span>
+              <strong id="step-count">0</strong>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="grid-stack-item" gs-x="3" gs-y="0" gs-w="9" gs-h="9" gs-min-w="5" gs-min-h="6">
+        <div class="grid-stack-item-content">
+          <section class="panel graph-panel">
+            <div class="panel-title-row">
+              <h2>Graph View</h2>
+              <span id="phase-badge" class="phase-badge">Idle</span>
+            </div>
+            <svg id="graph-svg" viewBox="0 0 960 560" aria-label="graph visualization"></svg>
+            <div id="graph-highlight" class="graph-highlight">
+              <button id="graph-prev-btn" class="nav-pill nav-left" type="button">上一步</button>
+              <div id="graph-highlight-content" class="graph-highlight-content">
+                <div class="empty-state">目前步驟與加法過程會顯示在這裡。</div>
+              </div>
+              <button id="graph-next-btn" class="nav-pill nav-right" type="button">下一步</button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="grid-stack-item" gs-x="3" gs-y="9" gs-w="5" gs-h="5" gs-min-w="3" gs-min-h="4">
+        <div class="grid-stack-item-content">
+          <article class="panel">
+            <div class="panel-title-row">
+              <h2>Algorithm Process</h2>
+              <span id="progress-label" class="mini-tag">0 / 0</span>
+            </div>
+            <div id="current-step-card" class="current-step-card">
+              <div class="empty-state">目前步驟會固定顯示在這裡。</div>
+            </div>
+            <div id="process-log" class="process-log">
+              <div class="empty-state">執行演算法後，這裡會顯示每一步鬆弛過程。</div>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="grid-stack-item" gs-x="8" gs-y="9" gs-w="4" gs-h="5" gs-min-w="3" gs-min-h="4">
+        <div class="grid-stack-item-content">
+          <article class="panel">
+            <div class="panel-title-row">
+              <h2>Distance Snapshot</h2>
+              <span id="snapshot-note" class="mini-tag">Waiting</span>
+            </div>
+            <div id="distance-table" class="table-wrap"></div>
+            <div id="result-card" class="result-card">
+              <p>選擇起點、中繼點、終點後執行，就會在這裡顯示答案與路徑。</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
