@@ -26,7 +26,7 @@
             <p class="eyebrow">Intermediate Point Shortest Path</p>
             <h1>Dual Bellman-Ford Visualizer</h1>
             <p class="brand-copy">
-              先算起點到每個點的距離，再算每個點到終點的距離，最後把中繼點那一格前後相加。
+              先算起點到每個點的最短距離(dA)，再算每個點到終點的最短距離(dB)，最後把中繼點的dA+dB即為答案。
             </p>
           </div>
         </div>
@@ -39,7 +39,7 @@
               <h2>Query</h2>
               <span class="mini-tag">Drag</span>
             </div>
-            <div class="field-grid">
+            <div class="field-grid three-col">
               <label>
                 <span>Start</span>
                 <select id="query-source"></select>
