@@ -672,11 +672,18 @@ function summarizeIntermediate(source, via, target, forward, reverse) {
   const forwardCost = forward.distances[via];
   const reverseCost = reverse.distances[via];
 
-  if (!Number.isFinite(forwardCost) || !Number.isFinite(reverseCost)) {
+  if (!Number.isFinite(forwardCost)) {
     return {
       ok: false,
-      message: `中繼點 ${via} 不可達，所以無法形成 ${source} -> ${via} -> ${target} 的合法路徑。`,
+      message: `無法從起點 ${source} 到達中繼點 ${via}：${source} -X-> ${via} ---> ${target}`,
     };
+  }
+
+  if (!Number.isFinite(reverseCost)) {
+    return {
+      ok: false,
+      message: `無法從中繼點 ${via} 到達終點 ${target}：${source} ---> ${via} -X-> ${target}`,
+    }
   }
 
   const pathToVia = reconstructForwardPath(source, via, forward.parents);
@@ -1023,14 +1030,6 @@ function describeOutcome(step) {
   return step.relaxed ? "Update: 更新距離" : "No update: 維持原值";
 }
 
-function stepBackward() {
-  pausePlayback();
-  if (state.animationSteps.length === 0) {
-    return;
-  }
-  renderStep(Math.max(state.currentStepIndex - 1, 0));
-}
-
 function renderProcessLog() {
   if (state.animationSteps.length === 0) {
     elements.currentStepCard.innerHTML =
@@ -1199,6 +1198,14 @@ function stepForward() {
     return;
   }
   renderStep(Math.min(state.currentStepIndex + 1, state.animationSteps.length - 1));
+}
+
+function stepBackward() {
+  pausePlayback();
+  if (state.animationSteps.length === 0) {
+    return;
+  }
+  renderStep(Math.max(state.currentStepIndex - 1, 0));
 }
 
 function resetPlayback() {
