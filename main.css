@@ -767,6 +767,30 @@ tbody tr.focus-row {
   flex-shrink: 0;
 }
 
+.playback-row {
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 0;
+}
+
+.playback-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.playback-center {
+  width: 44px;
+  height: 44px;
+  font-size: 1.25rem;
+  box-shadow: 0 0 24px rgba(121, 255, 247, 0.25);
+}
+
 .builder-divider {
   position: relative;
   z-index: 1;

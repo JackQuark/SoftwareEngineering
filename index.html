@@ -72,11 +72,13 @@
               <span>播放速度</span>
               <input id="speed-slider" type="range" min="0.25" max="3" step="0.25" value="1" />
             </label>
-            <div class="action-row">
-              <button id="play-btn" class="secondary-btn">播放</button>
-              <button id="pause-btn" class="ghost-btn">暫停</button>
-              <button id="step-btn" class="ghost-btn">下一步</button>
-              <button id="reset-btn" class="ghost-btn">重置</button>
+            <div style="height: 8px;"></div>
+            <div class="action-row playback-row">
+              <button id="first-btn"      class="ghost-btn playback-btn" title="回到第一步">⏮</button>
+              <button id="prev-btn"       class="ghost-btn playback-btn" title="上一步">⏴</button>
+              <button id="play-pause-btn" class="primary-btn playback-btn playback-center" title="播放/暫停">▶</button>
+              <button id="step-btn"       class="ghost-btn playback-btn" title="下一步">⏵</button>
+              <button id="last-btn"       class="ghost-btn playback-btn" title="跳到最後一步">⏭</button>
             </div>
           </section>
         </div>
@@ -116,15 +118,17 @@
                 <span>To</span>
                 <select id="edge-to"></select>
               </label>
-              <label class="full-span">
+              <label>
                 <span>Weight</span>
                 <input id="edge-weight" type="number" value="4" step="1" />
               </label>
+              <label>
+                <span>&nbsp;</span>
+                <button id="add-edge-btn" class="secondary-btn full-width-btn">
+                  新增有向邊
+                </button>
+              </label>
             </div>
-            <div style="height: 8px;"></div>
-            <button id="add-edge-btn" class="secondary-btn full-width-btn">
-              新增有向邊
-            </button>
 
             <div class="builder-divider"><span>刪除</span></div>
 

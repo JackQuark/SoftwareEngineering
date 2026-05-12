@@ -52,10 +52,11 @@ function cacheElements() {
   elements.undoBtn = document.getElementById("undo-btn");
   elements.redoBtn = document.getElementById("redo-btn");
   elements.runBtn = document.getElementById("run-btn");
-  elements.playBtn = document.getElementById("play-btn");
-  elements.pauseBtn = document.getElementById("pause-btn");
+  elements.playPauseBtn = document.getElementById("play-pause-btn");
+  elements.firstBtn = document.getElementById("first-btn");
+  elements.prevBtn = document.getElementById("prev-btn");
   elements.stepBtn = document.getElementById("step-btn");
-  elements.resetBtn = document.getElementById("reset-btn");
+  elements.lastBtn = document.getElementById("last-btn");
   elements.edgeFrom = document.getElementById("edge-from");
   elements.edgeTo = document.getElementById("edge-to");
   elements.edgeWeight = document.getElementById("edge-weight");
@@ -161,10 +162,11 @@ function bindEvents() {
   // <<< Delete node/edge events
 
   elements.runBtn.addEventListener("click", runQuery);
-  elements.playBtn.addEventListener("click", startPlayback);
-  elements.pauseBtn.addEventListener("click", pausePlayback);
+  elements.playPauseBtn.addEventListener("click", togglePlayPause);
+  elements.firstBtn.addEventListener("click", jumpToFirst);
+  elements.prevBtn.addEventListener("click", stepBackward);
   elements.stepBtn.addEventListener("click", stepForward);
-  elements.resetBtn.addEventListener("click", resetPlayback);
+  elements.lastBtn.addEventListener("click", jumpToLast);
   elements.graphPrevBtn.addEventListener("click", stepBackward);
   elements.graphNextBtn.addEventListener("click", stepForward);
 
@@ -1158,21 +1160,6 @@ function updateStatusBadges() {
   elements.phaseBadge.textContent = step?.stageLabel || "Idle";
 }
 
-function startPlayback() {
-  pausePlayback();
-
-  if (state.animationSteps.length <= 1) {
-    return;
-  }
-
-  if (state.currentStepIndex >= state.animationSteps.length - 1) {
-    state.currentStepIndex = 0;
-    renderStep(0);
-  }
-
-  scheduleNextTick();
-}
-
 function scheduleNextTick() {
   if (state.currentStepIndex >= state.animationSteps.length - 1) {
     pausePlayback();
@@ -1185,11 +1172,42 @@ function scheduleNextTick() {
   }, BASE_DELAY / state.playbackSpeed);
 }
 
+// playback controls
+function togglePlayPause() {
+  if (state.playbackTimer !== null) {
+    pausePlayback();
+  } else {
+    startPlayback();
+  }
+}
+
+function startPlayback() {
+  pausePlayback();
+
+  if (state.animationSteps.length <= 1) {
+    return;
+  }
+
+  if (state.currentStepIndex >= state.animationSteps.length - 1) {
+    state.currentStepIndex = 0;
+    renderStep(0);
+  }
+
+  setPlayPauseIcon(true);
+  scheduleNextTick();
+}
+
 function pausePlayback() {
   if (state.playbackTimer !== null) {
     window.clearTimeout(state.playbackTimer);
     state.playbackTimer = null;
   }
+  setPlayPauseIcon(false);
+}
+
+function setPlayPauseIcon(playing) {
+  if (!elements.playPauseBtn) return;
+  elements.playPauseBtn.textContent = playing ? "⏸" : "▶";
 }
 
 function stepForward() {
@@ -1208,7 +1226,7 @@ function stepBackward() {
   renderStep(Math.max(state.currentStepIndex - 1, 0));
 }
 
-function resetPlayback() {
+function jumpToFirst() {
   pausePlayback();
   if (state.animationSteps.length === 0) {
     return;
@@ -1216,6 +1234,15 @@ function resetPlayback() {
   renderStep(0);
 }
 
+function jumpToLast() {
+  pausePlayback();
+  if (state.animationSteps.length === 0) {
+    return;
+  }
+  renderStep(state.animationSteps.length - 1);
+}
+
+// helper functions
 function getWeightRange() {
   if (state.edges.length === 0) {
     return { minWeight: 0, maxWeight: 1 };
