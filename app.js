@@ -96,18 +96,15 @@ function bindEvents() {
     const to = Number(elements.edgeTo.value);
     const weight = Number(elements.edgeWeight.value);
 
-    if (!Number.isFinite(from) || !Number.isFinite(to)) {
-      showResult("請先建立至少兩個節點。", true);
-      return;
-    }
-
+    const errlog = [];
     if (from === to) {
-      showResult("這個版本不允許自迴圈邊。", true);
-      return;
+      errlog.push("不允許自迴圈邊");
     }
-
-    if (!Number.isFinite(weight)) {
-      showResult("邊權重必須是數字。", true);
+    if (!Number.isInteger(weight)) {
+      errlog.push("權重必須是整數");
+    }
+    if (errlog.length > 0) {
+      showResult(errlog.join(", "), true);
       return;
     }
 
