@@ -799,6 +799,12 @@ function renderStep(index) {
   renderProcessLog();
   renderDistanceTable(state.animationSteps[state.currentStepIndex]);
   renderGraph();
+
+  const isLastStep = state.currentStepIndex === state.animationSteps.length - 1;
+  const result = state.lastResult?.summary;
+  if (isLastStep && result?.ok) {
+    animateShortestPath(result.fullPath);
+  }
 }
 
 function renderGraph() {
@@ -889,18 +895,17 @@ function renderGraph() {
           transform="translate(${node.x}, ${node.y})"
         >
           <circle class="node-ring" r="29"></circle>
-          <rect class="node-distance-box" x="-34" y="-66" width="68" height="18" rx="9"></rect>
-          ${renderNodeMarker(roleLabel)}
+          <rect class="node-distance-box" x="-34" y="-53" width="68" height="18" rx="9"></rect>
           <circle class="node-core" r="${NODE_RADIUS}"></circle>
           <text class="node-label" y="2">${node.id}</text>
-          <text class="node-distance" y="-53">${distanceLabel}</text>
+          <text class="node-distance" y="-44">${distanceLabel}</text>
           ${roleLabel ? `<text class="node-role" y="42">${roleLabel}</text>` : ""}
         </g>
       `;
     })
     .join("");
 
-  elements.svg.innerHTML = `${defs}${background}<g>${edgeMarkup}</g><g>${nodeMarkup}</g>`;
+  elements.svg.innerHTML = `${defs}${background}<g>${edgeMarkup}</g><g>${nodeMarkup}</g><g id="path-anim-layer"></g>`;
 }
 
 function renderNodeMarker(roleLabel) {
@@ -1237,6 +1242,82 @@ function jumpToLast() {
     return;
   }
   renderStep(state.animationSteps.length - 1);
+}
+
+// ── Shortest-path walk animation ─────────────────────────────────────────────
+
+let _pathAnimTimer = null;
+
+function animateShortestPath(fullPath) {
+  if (_pathAnimTimer !== null) {
+    clearTimeout(_pathAnimTimer);
+    _pathAnimTimer = null;
+  }
+
+  const layer = document.getElementById("path-anim-layer");
+  if (!layer || !fullPath || fullPath.length < 2) return;
+  layer.innerHTML = "";
+
+  // Build ordered list of edges to light up
+  const edgeSequence = [];
+  for (let i = 0; i < fullPath.length - 1; i++) {
+    const fromId = fullPath[i];
+    const toId   = fullPath[i + 1];
+    const edge   = state.edges.find((e) => e.from === fromId && e.to === toId);
+    if (edge) edgeSequence.push(edge);
+  }
+
+  const STEP_MS = Math.max(320, 700 / state.playbackSpeed);
+
+  // Sequentially light up each segment
+  function lightUpSegment(idx) {
+    const geo = getEdgeGeometry(edgeSequence[idx]);
+
+    // Pulsing dot travelling along the edge path
+    const dotId = `path-dot-${idx}`;
+    const segEl = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    segEl.innerHTML = `
+      <path id="seg-${idx}" d="${geo.path}" fill="none"
+        stroke="#79fff7" stroke-width="3.8" stroke-linecap="round"
+        marker-end="url(#arrow-head)" opacity="0"
+        class="path-anim-seg"/>
+      <circle id="${dotId}" r="7" fill="#79fff7" opacity="0.9"
+        filter="url(#anim-glow)" class="path-anim-dot"/>
+    `;
+    layer.appendChild(segEl);
+
+    // Animate dot along the path using requestAnimationFrame
+    const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    pathEl.setAttribute("d", geo.path);
+    const totalLength = pathEl.getTotalLength();
+    const dot = segEl.querySelector(`#${dotId}`);
+    const startTime = performance.now();
+
+    function moveDot(now) {
+      const elapsed = now - startTime;
+      const t = Math.min(elapsed / STEP_MS, 1);
+      const pt = pathEl.getPointAtLength(t * totalLength);
+      dot.setAttribute("cx", pt.x);
+      dot.setAttribute("cy", pt.y);
+
+      if (t < 1) {
+        requestAnimationFrame(moveDot);
+      } else {
+        dot.style.opacity = "0";
+        dot.style.transition = `opacity ${STEP_MS * 0.2}ms ease`;
+        _pathAnimTimer = setTimeout(() => lightUpSegment(idx + 1), STEP_MS * 0.15);
+      }
+    }
+
+    // Kick off the dot at the from-node position
+    const startPt = pathEl.getPointAtLength(0);
+    dot.setAttribute("cx", startPt.x);
+    dot.setAttribute("cy", startPt.y);
+    requestAnimationFrame(moveDot);
+  }
+
+  // Small delay so the answer step renders first
+  _pathAnimTimer = setTimeout(() => lightUpSegment(0), 180);
 }
 
 // helper functions
