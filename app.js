@@ -245,7 +245,7 @@ function clearGraph() {
   clearComputation();
   refreshControls();
   renderGraph();
-  showResult("圖已清空。先新增節點與邊，再執行查詢。");
+  showResult("Graph 已清空。先新增節點與邊，再執行演算法。");
 }
 
 function addNode() {
@@ -334,7 +334,7 @@ function refreshAfterGraphChange() {
   clearComputation();
   refreshControls();
   renderGraph();
-  showResult("圖已更新。請重新執行演算法以產生新的步驟。");
+  showResult("Graph 已更新，請重新執行演算法");
 }
 
 function clearComputation() {
@@ -779,10 +779,15 @@ function describeRelaxation(mode, pass, edge, relaxFrom, relaxTo, sourceDistance
   }
 
   if (updated) {
-    return `${prefix}第 ${pass} 輪檢查 ${edgeText}：${formatDistance(sourceDistance)} + ${edge.weight} = ${formatDistance(candidate)}，更新 d[${relaxTo}]。`;
+    return mode === "forward"
+      ? `由於 dA[${relaxFrom}] + ${edge.weight} = ${formatDistance(candidate)} < dA[${relaxTo}] = ${formatDistance(previous)}，dA[${relaxTo}] 更新為 ${formatDistance(candidate)}`
+      : `由於 dB[${relaxFrom}] + ${edge.weight} = ${formatDistance(candidate)} < dB[${relaxTo}] = ${formatDistance(previous)}，dB[${relaxTo}] 更新為 ${formatDistance(candidate)}`;
+  } else {
+    return mode === "forward"
+      ? `由於 dA[${relaxFrom}] + ${edge.weight} = ${formatDistance(candidate)} ≥ dA[${relaxTo}] = ${formatDistance(previous)}，dA[${relaxTo}] 不更新`
+      : `由於 dB[${relaxFrom}] + ${edge.weight} = ${formatDistance(candidate)} ≥ dB[${relaxTo}] = ${formatDistance(previous)}，dB[${relaxTo}] 不更新`;
   }
 
-  return `${prefix}第 ${pass} 輪檢查 ${edgeText}：候選值 ${formatDistance(candidate)} 不優於目前的 ${formatDistance(previous)}。`;
 }
 
 function renderStep(index) {
@@ -850,7 +855,6 @@ function renderGraph() {
   const background = `
     <rect x="0" y="0" width="${VIEWBOX.width}" height="${VIEWBOX.height}" rx="20" fill="url(#scene-glow)"></rect>
     <rect x="0" y="0" width="${VIEWBOX.width}" height="${VIEWBOX.height}" rx="20" fill="url(#grid-pattern)"></rect>
-    <text x="32" y="42" class="hint-label">Demo: 找 1 → 3 → 4。先算 1 到各點，再算各點到 4，最後把節點 3 的兩段距離相加。</text>
   `;
 
   const edgeMarkup = state.edges
@@ -926,20 +930,18 @@ function renderNodeMarker(roleLabel) {
 
 function renderGraphHighlight(currentStep, selected) {
   if (!currentStep) {
-    elements.graphHighlightContent.innerHTML =
-      '<div class="empty-state">目前步驟與加法過程會顯示在這裡。</div>';
+    elements.graphHighlightContent.innerHTML = '';
     return;
   }
 
-  const phaseText = currentStep.stageLabel || currentStep.phase || "Idle";
   const formulaMarkup = buildRelaxFormula(currentStep);
   const outcomeText = describeOutcome(currentStep);
 
-  const stepLabel = currentStep.iteration > 0 ? `Pass ${currentStep.iteration}` : "Init";
+  const Label = currentStep.iteration > 0 ? `${currentStep.stageLabel} · Round ${currentStep.iteration}` : `${currentStep.stageLabel}`;
 
   elements.graphHighlightContent.innerHTML = `
     <div class="highlight-head">
-      <span class="highlight-title">${phaseText} · ${stepLabel}</span>
+      <span class="highlight-title">${Label}</span>
       <span class="highlight-step">Step ${state.currentStepIndex + 1} / ${state.animationSteps.length}</span>
     </div>
     <div class="highlight-big ${currentStep.relaxed ? "success" : ""}">${formulaMarkup}</div>
@@ -991,13 +993,14 @@ function buildRelaxFormula(step) {
   }
 
   if (!step?.detail) {
-    return step?.type === "pass-end" ? "本輪已掃完所有邊" : "等待下一個 relax 步驟";
+    return step?.type === "pass-end" ? "本輪已掃完所有邊" : "等待下一步 relaxation";
   }
 
   const { relaxFrom, relaxTo, sourceDistance, weight, candidate, previous } = step.detail;
+  const dAorB = step.phase === "forward" ? "dA" : "dB";
   return `
     <span class="formula-chip">
-      <span class="formula-label">from ${relaxFrom}</span>
+      <span class="formula-label">${dAorB}[${relaxFrom}] </span>
       <span class="formula-number">${formatDistance(sourceDistance)}</span>
     </span>
     <span class="formula-operator">+</span>
@@ -1012,34 +1015,28 @@ function buildRelaxFormula(step) {
     </span>
     <span class="formula-operator">vs</span>
     <span class="formula-chip current">
-      <span class="formula-label">current ${relaxTo}</span>
+      <span class="formula-label">${dAorB}[${relaxTo}]</span>
       <span class="formula-number">${formatDistance(previous)}</span>
     </span>
   `;
 }
 
 function describeOutcome(step) {
-  if (step?.type === "notice") {
-    return "準備開始掃描所有邊";
-  }
-
-  if (step?.type === "answer" && step.summary?.ok) {
-    return `最短距離 = ${formatDistance(step.summary.totalDistance)}`;
-  }
-
+  
   if (!step?.detail) {
-    return step?.type === "negative-cycle" ? "第 n 輪仍可更新，疑似負環" : "沒有公式比較";
+    return step?.type === "negative-cycle" ? "第 n 輪仍可更新，疑似負環" : "";
   }
-
-  return step.relaxed ? "Update: 更新距離" : "No update: 維持原值";
+  
+  const { relaxFrom, relaxTo, sourceDistance, weight, candidate, previous } = step.detail;
+  const dAorB = step.phase === "forward" ? "dA" : "dB";
+  return step.relaxed ? `Update: ${dAorB}[${relaxTo}] ⭠ candidate` : "No Update";
 }
 
 function renderProcessLog() {
   if (state.animationSteps.length === 0) {
     elements.currentStepCard.innerHTML =
-      '<div class="empty-state">目前步驟會固定顯示在這裡。</div>';
-    elements.processLog.innerHTML =
-      '<div class="empty-state">執行演算法後，這裡會顯示每一步鬆弛過程。</div>';
+      '<div class="empty-state">Graph 已更新或清空，請重新執行演算法以產生新的 log</div>';
+    elements.processLog.innerHTML = '';
     return;
   }
 
@@ -1057,11 +1054,11 @@ function renderProcessLog() {
   elements.processLog.innerHTML = state.animationSteps
     .map((step, index) => {
       const currentClass = index === state.currentStepIndex ? "current" : "";
-      const passLabel = step.iteration > 0 ? `Pass ${step.iteration}` : "Init";
+      const Label = step.iteration > 0 ? `${step.stageLabel} · Round ${step.iteration}` : `${step.stageLabel}`;
       return `
         <div class="log-entry ${currentClass}">
           <div class="log-meta">
-            <span>${step.stageLabel} · ${passLabel}</span>
+            <span>${Label}</span>
             <span>Step ${index + 1}</span>
           </div>
           <p class="log-message">${step.message}</p>
@@ -1111,13 +1108,13 @@ function renderDistanceTable(step = null) {
   elements.snapshotNote.textContent = step.stageLabel;
 
   if (step.summary) {
-    renderSummary(step.summary);
+    renderSummary(step.summary, step.via);
   } else {
     renderProgressHint(step);
   }
 }
 
-function renderSummary(summary) {
+function renderSummary(summary, via) {
   if (!summary) {
     return;
   }
@@ -1131,7 +1128,7 @@ function renderSummary(summary) {
   elements.resultCard.className = "result-card";
   elements.resultCard.innerHTML = `
     <p><strong>最短距離</strong>：經過中繼點的總成本是 <strong>${summary.totalDistance}</strong>。</p>
-    <p class="formula">dA[via] + dB[via] = ${summary.forwardCost} + ${summary.reverseCost} = ${summary.totalDistance}</p>
+    <p class="formula">dA[via] + dB[${via}}] = ${summary.forwardCost} + ${summary.reverseCost} = ${summary.totalDistance}</p>
     <p>正向路徑：${summary.pathToVia.join(" → ")}</p>
     <p>反向路徑：${summary.pathToTarget.join(" → ")}</p>
     <p>完整路徑：${route}</p>
@@ -1140,12 +1137,11 @@ function renderSummary(summary) {
 
 function renderProgressHint(step) {
   const hintByStage = {
-    Forward: "目前在跑第一段 Bellman-Ford，計算起點到各節點的最短距離 dA。",
-    Bridge: "正向距離已固定，接著改從終點反向鬆弛，準備取得 dB。",
-    Reverse: "目前在跑第二段 Bellman-Ford，計算各節點走到終點的最短距離 dB。",
+    Forward: "執行第一段 Bellman-Ford，計算起點到各節點的最短距離 dA。",
+    Reverse: "執行第二段 Bellman-Ford，計算各節點走到終點的最短距離 dB。",
   };
 
-  showResult(hintByStage[step.stageLabel] || "演算法正在執行中。");
+  showResult(hintByStage[step.stageLabel] || "演算法執行中。");
 }
 
 function showResult(message, isError = false) {
